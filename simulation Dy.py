@@ -1,3 +1,6 @@
+                                            #------UPDATED CODE FOR WITH LUV'S LOGIC------------------ 
+# Dynamic Signal Timing based on traffic using traffic_analyzer.py logic
+
 # LAG
 # NO. OF VEHICLES IN SIGNAL CLASS
 # stops not used
@@ -16,6 +19,7 @@ import sys
 import os
 import random
 import csv
+import json #updated-edition
 
 # Default values of signal times
 defaultRed = 150
@@ -270,41 +274,51 @@ def initialize():
     signals.append(ts4)
     repeat()
 
+
+
+
 # Set time according to formula
 def setTime():
     global noOfCars, noOfBikes, noOfBuses, noOfTrucks, noOfRickshaws, noOfLanes
     global carTime, busTime, truckTime, rickshawTime, bikeTime
+
     os.system("say detecting vehicles, "+directionNumbers[(currentGreen+1)%noOfSignals])
-#    detection_result=detection(currentGreen,tfnet)
-#    greenTime = math.ceil(((noOfCars*carTime) + (noOfRickshaws*rickshawTime) + (noOfBuses*busTime) + (noOfBikes*bikeTime))/(noOfLanes+1))
-#    if(greenTime<defaultMinimum):
-#       greenTime = defaultMinimum
-#    elif(greenTime>defaultMaximum):
-#       greenTime = defaultMaximum
-    # greenTime = len(vehicles[currentGreen][0])+len(vehicles[currentGreen][1])+len(vehicles[currentGreen][2])
-    # noOfVehicles = len(vehicles[directionNumbers[nextGreen]][1])+len(vehicles[directionNumbers[nextGreen]][2])-vehicles[directionNumbers[nextGreen]]['crossed']
-    # print("no. of vehicles = ",noOfVehicles)
+
+    # Count vehicles waiting at the next signal
     noOfCars, noOfBuses, noOfTrucks, noOfRickshaws, noOfBikes = 0,0,0,0,0
     for j in range(len(vehicles[directionNumbers[nextGreen]][0])):
         vehicle = vehicles[directionNumbers[nextGreen]][0][j]
         if(vehicle.crossed==0):
-            vclass = vehicle.vehicleClass
-            # print(vclass)
             noOfBikes += 1
     for i in range(1,3):
         for j in range(len(vehicles[directionNumbers[nextGreen]][i])):
             vehicle = vehicles[directionNumbers[nextGreen]][i][j]
             if(vehicle.crossed==0):
                 vclass = vehicle.vehicleClass
-                # print(vclass)
-                if(vclass=='car'):
+                if vclass=='car':
                     noOfCars += 1
-                elif(vclass=='bus'):
+                elif vclass=='bus':
                     noOfBuses += 1
-                elif(vclass=='truck'):
+                elif vclass=='truck':
                     noOfTrucks += 1
-                elif(vclass=='rickshaw'):
+                elif vclass=='rickshaw':
                     noOfRickshaws += 1
+
+    # Total vehicle count for that direction
+    total_waiting = noOfCars + noOfBuses + noOfTrucks + noOfRickshaws + noOfBikes
+
+    # --- USE YOUR LOGIC HERE ---
+    plan = compute_signal_plan(total_waiting)
+    greenTime = int(plan["green"])   # simulator expects int seconds
+    signals[(currentGreen+1) % (noOfSignals)].green = greenTime
+
+    print(f"[LOGIC] Vehicles={total_waiting}, Assigned Green={greenTime}, Plan={plan}")
+
+
+#---------END LOGCIC---------
+
+
+
     # print(noOfCars)
     greenTime = math.ceil(((noOfCars*carTime) + (noOfRickshaws*rickshawTime) + (noOfBuses*busTime) + (noOfTrucks*truckTime)+ (noOfBikes*bikeTime))/(noOfLanes+1))
     # greenTime = math.ceil((noOfVehicles)/noOfLanes) 
@@ -463,6 +477,41 @@ def simulationTime():
 
             os._exit(1)
 # ...existing code...
+
+
+
+#Updated Logic for signal timing using traffic counts from JSON 
+# -------------------------------
+CYCLE_TIME = 120   # total cycle length (sec)
+MIN_GREEN = 10     # minimum green time
+YELLOW = 3         # fixed yellow
+CLEAR_RATE = 0.5   # vehicles cleared per sec of green
+
+def compute_signal_plan(vehicle_count: int) -> dict:
+    """
+    Compute green, yellow, red timing for a single lane based on vehicle count.
+    """
+    max_green = CYCLE_TIME - YELLOW
+
+    if vehicle_count <= 0:
+        green = MIN_GREEN
+    else:
+        required_green = vehicle_count / CLEAR_RATE
+        green = min(max_green, max(MIN_GREEN, required_green))
+
+    red = max(0, CYCLE_TIME - green - YELLOW)
+
+    return {
+        "green": round(green, 2),
+        "yellow": YELLOW,
+        "red": round(red, 2),
+    }
+# -------------------------------
+
+
+
+
+
 
   
     
